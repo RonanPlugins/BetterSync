@@ -12,7 +12,12 @@ public final class EditorFiles {
     @FunctionalInterface
     public interface Reload { void run() throws Exception; }
 
+    @Deprecated
     public static Path apply(EditorProfile profile, Path file, byte[] snapshot, String edited, Reload reload) throws Exception {
+        return apply((EditorDefinition) profile, file, snapshot, edited, reload);
+    }
+
+    public static Path apply(EditorDefinition profile, Path file, byte[] snapshot, String edited, Reload reload) throws Exception {
         profile.validate(new String(snapshot, StandardCharsets.UTF_8), edited);
         Path backups = file.getParent().resolve("editor-backups");
         Files.createDirectories(backups);

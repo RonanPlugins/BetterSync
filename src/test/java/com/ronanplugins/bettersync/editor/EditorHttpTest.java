@@ -23,11 +23,13 @@ public class EditorHttpTest {
 
     @Test public void preservesProtocolAndPluginIdentityForEveryProfile() throws Exception {
         AtomicReference<String> identity = new AtomicReference<>();
+        AtomicReference<String> schemaVersion = new AtomicReference<>();
         AtomicReference<String> protocol = new AtomicReference<>();
         AtomicReference<String> actor = new AtomicReference<>();
         AtomicReference<String> token = new AtomicReference<>();
         AtomicReference<String> request = new AtomicReference<>();
         server.createContext("/api/editor/sync", exchange -> {
+            schemaVersion.set(exchange.getRequestHeaders().getFirst("X-Editor-Schema-Version"));
             identity.set(exchange.getRequestHeaders().getFirst("X-Editor-Plugin"));
             protocol.set(exchange.getRequestHeaders().getFirst("X-Editor-Protocol"));
             actor.set(exchange.getRequestHeaders().getFirst("X-Editor-Actor"));
@@ -38,9 +40,10 @@ public class EditorHttpTest {
             exchange.getResponseBody().write(bytes); exchange.close();
         });
         for (EditorProfile profile : EditorProfile.values()) {
-            JsonObject result = new EditorHttp(website, profile.id()).request("GET", "/api/editor/sync", null, "Secret12");
+            JsonObject result = new EditorHttp(website, profile.id(), "1").request("GET", "/api/editor/sync", null, "Secret12");
             assertEquals("test", result.get("content").getAsString());
             assertEquals(profile.id(), identity.get());
+            assertEquals("1", schemaVersion.get());
             assertEquals("4", protocol.get()); assertEquals("plugin", actor.get());
             assertEquals("Secret12", token.get()); assertEquals("/api/editor/sync", request.get());
         }

@@ -1,7 +1,8 @@
 package com.ronanplugins.bettersync.editor;
 
 /** Supported relay identities and their configuration validation rules. */
-public enum EditorProfile {
+@Deprecated
+public enum EditorProfile implements EditorDefinition {
     ADVANCEDMODREQ("advancedmodreq", "AdvancedModreq") {
         public void parse(String text) throws Exception { com.ronanplugins.bettersync.editor.advancedmodreq.EditorConfig.parse(text); }
         public void validate(String before, String after) throws Exception { com.ronanplugins.bettersync.editor.advancedmodreq.EditorConfig.validate(before, after); }
