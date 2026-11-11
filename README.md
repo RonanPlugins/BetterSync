@@ -21,7 +21,7 @@ Maven reactor module, `systemPath`, or manual `mvn install`.
     <dependency>
         <groupId>com.github.RonanPlugins</groupId>
         <artifactId>BetterSync</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.1</version>
     </dependency>
 </dependencies>
 ```
@@ -30,8 +30,8 @@ Include `com.github.RonanPlugins:BetterSync` in any Shade artifact allowlist and
 relocate `com.ronanplugins.bettersync` to your plugin's private library package.
 Bukkit, Bungee chat, and Gson are provided by the server, not bundled here.
 
-**First release:** the consumer POMs target `1.0.0`. Push the library source and
-create the Git tag `1.0.0` before merging the consumer changes. Ask JitPack to build
+**First release:** the consumer POMs target `1.0.1`. Push the library source and
+create the Git tag `1.0.1` before merging the consumer changes. Ask JitPack to build
 that tag and confirm it succeeds. Until then, this new dependency is unavailable
 remotely. A public GitHub repository supports public consumption; private
 repositories require JitPack access configuration.
@@ -78,6 +78,6 @@ No background polling or automatic sync is performed.
 
 ## Development
 
-Run `mvn clean verify` with JDK 17. Output targets Java 8. The regression fixtures
+Run `./mvnw clean verify` with JDK 17. Output targets Java 8. The regression fixtures
 are self-contained; no plugin source checkout is required to build this library.
 `jitpack.yml` builds and tests the published artifact on JitPack's infrastructure.
