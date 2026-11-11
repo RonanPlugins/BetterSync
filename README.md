@@ -80,5 +80,4 @@ No background polling or automatic sync is performed.
 
 Run `mvn clean verify` with JDK 17. Output targets Java 8. The regression fixtures
 are self-contained; no plugin source checkout is required to build this library.
-The GitHub workflow runs the same checks, and `jitpack.yml` builds the published
-artifact on JitPack's infrastructure.
+`jitpack.yml` builds and tests the published artifact on JitPack's infrastructure.
