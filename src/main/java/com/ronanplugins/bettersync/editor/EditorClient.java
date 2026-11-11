@@ -24,7 +24,7 @@ import java.util.concurrent.*;
 public final class EditorClient implements AutoCloseable {
     private final String website;
     private final EditorHttp http;
-    private final EditorDefinition profile;
+    private final EditorSchema profile;
     private final JavaPlugin plugin;
     private final String editorPlugin;
     private final String editorName;
@@ -38,21 +38,7 @@ public final class EditorClient implements AutoCloseable {
     private final java.util.concurrent.atomic.AtomicBoolean applying = new java.util.concurrent.atomic.AtomicBoolean();
     private volatile boolean stopped;
 
-    @Deprecated
-    public EditorClient(JavaPlugin plugin, EditorProfile profile, String website,
-                        BiConsumer<UUID, Consumer<CommandSender>> sync, Consumer<CommandSender> reload,
-                        Predicate<CommandSender> allowed, Supplier<String> loadedConfig) {
-        this(plugin, (EditorDefinition) profile, website, sync, reload, allowed, loadedConfig);
-    }
-
-    @Deprecated
-    public EditorClient(JavaPlugin plugin, EditorProfile profile, String website,
-                        Consumer<Runnable> sync, Consumer<CommandSender> reload,
-                        Predicate<CommandSender> allowed, Supplier<String> loadedConfig) {
-        this(plugin, (EditorDefinition) profile, website, sync, reload, allowed, loadedConfig);
-    }
-
-    public EditorClient(JavaPlugin plugin, EditorDefinition profile, String website,
+    public EditorClient(JavaPlugin plugin, EditorSchema profile, String website,
                         BiConsumer<UUID, Consumer<CommandSender>> sync, Consumer<CommandSender> reload,
                         Predicate<CommandSender> allowed, Supplier<String> loadedConfig) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
@@ -68,7 +54,7 @@ public final class EditorClient implements AutoCloseable {
     }
 
     /** Adapter for plugins whose scheduler runs callbacks on the server thread. */
-    public EditorClient(JavaPlugin plugin, EditorDefinition profile, String website,
+    public EditorClient(JavaPlugin plugin, EditorSchema profile, String website,
                         Consumer<Runnable> sync, Consumer<CommandSender> reload,
                         Predicate<CommandSender> allowed, Supplier<String> loadedConfig) {
         this(plugin, profile, website, (id, callback) -> sync.accept(() ->
@@ -115,7 +101,7 @@ public final class EditorClient implements AutoCloseable {
                     body.addProperty("playerId", upload.player == null ? null : upload.player.toString());
                     body.addProperty("configFile", "config.yml");
                     body.addProperty("plugin", editorPlugin);
-                    if (profile.schemaVersion() != null) body.addProperty("schemaVersion", profile.schemaVersion());
+                    body.addProperty("schemaVersion", profile.schemaVersion());
                     JsonArray availableWorlds = new JsonArray();
                     for (String world : worlds) availableWorlds.add(new JsonPrimitive(world));
                     body.add("worlds", availableWorlds);
@@ -164,8 +150,8 @@ public final class EditorClient implements AutoCloseable {
             try {
                 JsonObject response = http.request("GET", "/api/editor/sync", null, token);
                 if (!"config.yml".equals(response.get("configFile").getAsString())) throw new IOException("Invalid sync target.");
-                if (profile.schemaVersion() != null && (!response.has("schemaVersion") ||
-                        !profile.schemaVersion().equals(response.get("schemaVersion").getAsString())))
+                if (!response.has("schemaVersion") ||
+                        !profile.schemaVersion().equals(response.get("schemaVersion").getAsString()))
                     throw new IOException("Editor schema version does not match this plugin.");
                 String edited = response.get("content").getAsString();
                 long expires = response.get("expiresAt").getAsLong();

@@ -11,7 +11,6 @@ final class EditorHttp {
     private final String website;
     private final String editorPlugin;
     private final String schemaVersion;
-    EditorHttp(String website, String editorPlugin) { this(website, editorPlugin, null); }
     EditorHttp(String website, String editorPlugin, String schemaVersion) {
         this.schemaVersion = schemaVersion;
         this.website = EditorClient.validateWebsite(website);
@@ -25,7 +24,7 @@ final class EditorHttp {
         connection.setRequestProperty("User-Agent", "BetterSync-Editor/4");
         connection.setRequestProperty("X-Editor-Protocol", "4");
         connection.setRequestProperty("X-Editor-Plugin", editorPlugin);
-        if (schemaVersion != null) connection.setRequestProperty("X-Editor-Schema-Version", schemaVersion);
+        connection.setRequestProperty("X-Editor-Schema-Version", schemaVersion);
         if (syncToken != null) {
             connection.setRequestProperty("X-Editor-Sync-Token", syncToken);
         }

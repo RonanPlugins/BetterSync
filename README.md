@@ -1,46 +1,27 @@
 # BetterSync
 
-Java 8 compatible web editor library for AdvancedModreq, BetterClaims, BetterRTP,
-and BetterRTP Addons. Each plugin shades and relocates this library into its own
-JAR. BetterSync is not a Bukkit plugin and is not installed on the server.
+A Java 8 library for uploading plugin YAML to a web editor and applying saved edits.
+Shade and relocate it into your plugin. No separate server plugin or local library
+checkout is required.
 
-## Maven dependency from GitHub
-
-The library is distributed from [RonanPlugins/BetterSync](https://github.com/RonanPlugins/BetterSync)
-through [JitPack](https://docs.jitpack.io/). Consumers need no library checkout,
-Maven reactor module, `systemPath`, or manual `mvn install`.
+## Maven
 
 ```xml
 <repositories>
-    <repository>
-        <id>jitpack.io</id>
-        <url>https://jitpack.io</url>
-    </repository>
+  <repository><id>jitpack.io</id><url>https://jitpack.io</url></repository>
 </repositories>
 <dependencies>
-    <dependency>
-        <groupId>com.github.RonanPlugins</groupId>
-        <artifactId>BetterSync</artifactId>
-        <version>1.1.0</version>
-    </dependency>
+  <dependency>
+    <groupId>com.github.RonanPlugins</groupId>
+    <artifactId>BetterSync</artifactId>
+    <version>2.0.0</version>
+  </dependency>
 </dependencies>
 ```
 
-Include `com.github.RonanPlugins:BetterSync` in any Shade artifact allowlist and
-relocate `com.ronanplugins.bettersync` to your plugin's private library package.
-Bukkit, Bungee chat, and Gson are provided by the server, not bundled here.
-
-**First release:** the consumer POMs target `1.1.0`. Push the library source and
-create the Git tag `1.1.0` before merging the consumer changes. Ask JitPack to build
-that tag and confirm it succeeds. Until then, this new dependency is unavailable
-remotely. A public GitHub repository supports public consumption; private
-repositories require JitPack access configuration.
-
-For release verification, build a consumer from its own checkout with an empty
-Maven cache (`mvn -Dmaven.repo.local=/tmp/consumer-release-check clean verify`).
-This checks remote resolution; building this library locally alone does not.
-Never reuse a release tag for changed code. Release a new version and update the
-consumer `bettersync.version` properties instead.
+Relocate `com.ronanplugins.bettersync` to your plugin's private package. Bukkit,
+Bungee chat and Gson are provided by the server. Releases are downloaded through
+JitPack from this repository; consumers do not run `mvn install` locally.
 
 ## Integration
 
@@ -48,83 +29,59 @@ consumer `bettersync.version` properties instead.
 editor = new EditorClient(
     this,
     EditorSchema.load(this, "META-INF/editor-schema.json"),
-    EditorClient.website(this, "META-INF/advancedmodreq-editor.properties"),
+    EditorClient.website(this, "META-INF/editor.properties"),
     tasks::player,
-    sender -> { reloadConfig(); reload(sender); },
-    sender -> !(sender instanceof Player) || sender.hasPermission("advancedmodreq.editor"),
-    () -> loadedConfiguration.saveToString()
+    sender -> reloadConfig(),
+    sender -> sender.hasPermission("example.editor"),
+    () -> getConfig().saveToString()
 );
 ```
 
-The filtered properties resource contains `website=${editor.website}`. Each plugin
-owns its endpoint metadata, including BetterRTP Addons. The client reads resources
-through the owning plugin, so multiple shaded copies cannot select each other's
-endpoint.
+The properties resource contains the filtered `website=${editor.website}` value.
+Commands call `editor.upload(sender)` and `editor.redeem(sender, token)`; shutdown
+calls `editor.close()`. The scheduler receives a UUID (null for console) and a
+callback, resolves the recipient on its server/player thread, and passes null
+when the recipient is unavailable. A `Consumer<Runnable>` constructor also supports
+ordinary server-thread schedulers.
 
-Commands call `editor.upload(sender)` and `editor.redeem(sender, token)`; plugin
-shutdown calls `editor.close()` before shutting down the scheduler.
+## Plugin-owned form metadata
 
-The player scheduler callback takes a UUID (null means console) and a recipient
-callback. It must resolve that recipient on the appropriate server/player thread,
-pass null if the player is unavailable, and avoid callbacks after plugin disable.
-A `Consumer<Runnable>` overload supports existing server-thread schedulers. The
-library's HTTP worker never invokes plugin reloads directly.
+The plugin owns and packages `META-INF/editor-schema.json`. Its own GitHub release
+publishes that file for the website. BetterSync stores no plugin schemas, validators,
+or plugin fixtures, and does not host new schema releases.
 
-Profiles preserve each plugin's configuration validation and protocol 4 identity.
-Common transport, bounded reads, backup creation, atomic replacement, and reload
-verification live in the library. Saving creates a backup of the current file;
-reload failure leaves the new file in place and reports the failure, as before.
-No background polling or automatic sync is performed.
+```json
+{
+  "x-bettersync": { "format": 1, "plugin": "example", "schemaVersion": "2", "displayName": "Example" },
+  "type": "object",
+  "properties": {
+    "Enabled": { "type": "boolean", "default": true },
+    "Count": { "type": "integer", "default": 5 },
+    "Names": { "type": "array", "items": { "type": "string" } }
+  }
+}
+```
+
+The generic reader checks declared types (`object`, `array`, `string`, `boolean`,
+`number`, `integer`, `null`, or a union), nested `properties`, `items`, typed
+`additionalProperties`, and required section names. Unknown settings are allowed.
+This is form metadata, not a complete JSON Schema engine. Range, enum, runtime
+material/sound and cross-field validation are not enforced by BetterSync.
+`enum`, `default`, titles and editor annotations may guide the website's controls.
+`x-equivalentDefaults` allows declared defaults materialized during plugin reload
+to compare equal to omitted values.
+
+Schema versions travel with upload and sync requests. A mismatched response is
+rejected before writing. Increment the schema version when changing field metadata.
+The library retains bounded YAML parsing, rejects object deserialization/tags/aliases,
+backs up the current file, writes atomically, and verifies reload results. Reload
+failure is reported without rolling back the written file.
+
+2.0.0 removes `EditorProfile`, `EditorDefinition`, all plugin-specific validators,
+and the deprecated overloads. There is no compatibility layer.
 
 ## Development
 
-Run `./mvnw clean verify` with JDK 17. Output targets Java 8. The regression fixtures
-are self-contained; no plugin source checkout is required to build this library.
-`jitpack.yml` builds and tests the published artifact on JitPack's infrastructure.
-
-## Plugin-owned validation schemas (1.1.0)
-
-New integrations supply `EditorSchema` instead of `EditorProfile`. The old enum and
-constructors remain for binary/source compatibility with 1.0.x; their validators are
-legacy behavior and are not used by the four migrated plugins. BetterSync main sources
-contain no copies of the new plugin schemas. Test fixtures are release snapshots.
-
-Schema resources are owned by each plugin repository and published as public JSON assets
-on this repository's GitHub release. Website builds download those assets by pinned URL
-and SHA-256; they do not need plugin checkouts. The `x-bettersync` object declares `format`,
-`plugin`, `schemaVersion`, and `displayName`. Schema version is independent of plugin and
-library versions. Never change a published schema in place.
-
-Format 1 supports these JSON Schema keywords: `type` (including a union), `properties`,
-`required`, `additionalProperties`, `items`, `propertyNames`, `minProperties` on named
-entry maps, `minimum`, `maximum`, `maxItems`, `pattern`, `enum`, `default`, `title`,
-`description`, `$id`, and `$schema`. This is an explicitly limited dialect: `$ref`,
-`oneOf`, and other unsupported keywords are rejected rather than silently ignored.
-Defaults are UI suggestions; they do not rewrite the user's YAML.
-
-BetterSync's edit policy adds:
-
-- `x-named`: an editable YAML list of maps keyed by unique entry names.
-- `x-editableProperties`: declared properties may be added/removed; existing unknown
-  properties must be preserved. Other objects retain their baseline keys.
-- `x-immutable`: values must remain equal to the local baseline.
-- `x-rules`: path-pattern constraints shared by matching fields.
-- `x-ranges`, `x-objectRanges`: ordered numeric field pairs; `x-inherit` merges a default
-  section before checking ranges. `x-lessThan` bounds a number by another setting.
-- `x-entryName`, `x-maxNumericName`, `x-caseInsensitive`, `x-caseInsensitiveKeys`: named
-  collection and enum rules.
-- `x-equivalentDefaults`: declared defaults are considered when checking reload equivalence.
-- `x-defaultChecks`: check an omitted field's effective default (for example a menu slot).
-- `x-serverCheck`: Java runtime checks (`material`, `sound`, `item`, `date`), optionally
-  limited to changed values by `x-checkChanged`, with `x-allow` literals. The browser
-  cannot claim that a value exists on a particular running Minecraft server.
-- `x-editor.collection`: UI collection behavior.
-
-Both evaluators preserve unknown baseline settings and enforce bounded input and nesting.
-Custom YAML tags, aliases, object-serialization markers, and encoded escape sequences
-remain prohibited. Sync is still validated against the receiving server's current file.
-
-New clients send the schema identity on upload and `X-Editor-Schema-Version` on redeem.
-The website must support that schema before the client is deployed. Missing/mismatched
-response versions are rejected before a config write. Use the website migrations before
-deploying the schema-aware plugins.
+Run `./mvnw clean verify` with JDK 17. Output targets Java 8. Tests use synthetic
+schemas; building BetterSync requires no consumer repository. Publish a new immutable
+Git tag for each release and verify JitPack before updating consumer dependencies.

@@ -21,7 +21,7 @@ public class EditorHttpTest {
     }
     @After public void stop() { server.stop(0); }
 
-    @Test public void preservesProtocolAndPluginIdentityForEveryProfile() throws Exception {
+    @Test public void preservesProtocolAndPluginIdentityForAnyPlugin() throws Exception {
         AtomicReference<String> identity = new AtomicReference<>();
         AtomicReference<String> schemaVersion = new AtomicReference<>();
         AtomicReference<String> protocol = new AtomicReference<>();
@@ -39,10 +39,10 @@ public class EditorHttpTest {
             exchange.sendResponseHeaders(200, bytes.length);
             exchange.getResponseBody().write(bytes); exchange.close();
         });
-        for (EditorProfile profile : EditorProfile.values()) {
-            JsonObject result = new EditorHttp(website, profile.id(), "1").request("GET", "/api/editor/sync", null, "Secret12");
+        for (String id : new String[] {"example", "another-example"}) {
+            JsonObject result = new EditorHttp(website, id, "1").request("GET", "/api/editor/sync", null, "Secret12");
             assertEquals("test", result.get("content").getAsString());
-            assertEquals(profile.id(), identity.get());
+            assertEquals(id, identity.get());
             assertEquals("1", schemaVersion.get());
             assertEquals("4", protocol.get()); assertEquals("plugin", actor.get());
             assertEquals("Secret12", token.get()); assertEquals("/api/editor/sync", request.get());
@@ -55,7 +55,7 @@ public class EditorHttpTest {
             exchange.sendResponseHeaders(302, -1); exchange.close();
         });
         try {
-            new EditorHttp(website, "betterclaims").request("GET", "/redirect", null, "Secret12");
+            new EditorHttp(website, "example", "2").request("GET", "/redirect", null, "Secret12");
             fail("Must reject redirects");
         } catch (IOException error) { assertEquals("Relay HTTP 302", error.getMessage()); }
     }
@@ -67,7 +67,7 @@ public class EditorHttpTest {
             try { exchange.getResponseBody().write(bytes); } finally { exchange.close(); }
         });
         try {
-            new EditorHttp(website, "advancedmodreq").request("GET", "/large", null, null);
+            new EditorHttp(website, "example", "2").request("GET", "/large", null, null);
             fail("Must reject oversized response");
         } catch (IOException error) { assertEquals("Relay response too large.", error.getMessage()); }
     }
