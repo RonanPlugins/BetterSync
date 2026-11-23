@@ -113,7 +113,7 @@ public final class EditorClient implements AutoCloseable {
                     sync.accept(upload.player, recipient -> {
                         if (stopped) return;
                         if (recipient == null || !allowed.test(recipient)) return;
-                        String url = website + "/editor/" + editorPlugin + "?token=" + browserToken;
+                        String url = website + "/plugins/" + editorPlugin + "/editor?token=" + browserToken;
                         recipient.sendMessage("§ePrivate editor link: expires in 24 hours. Save online, then run the sync command here. Do not share it.");
                         if (recipient instanceof Player) {
                             TextComponent link = new TextComponent("§a[Open " + editorName + " editor]");
